@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaTrashAlt, FaEdit, FaCheckCircle, FaPlusCircle } from 'react-icons/fa';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import '../styles/TodoList.css';
-
-const BASE_URL = "https://recently-levitra-taxi-becoming.trycloudflare.com/api/todos"; // Updated base URL
+import "../styles/TodoList.css";
 
 const TodoList = () => {
   const [todos, setTodos] = useState([]);
@@ -13,27 +10,25 @@ const TodoList = () => {
   const [completed, setCompleted] = useState(false);
   const [editId, setEditId] = useState(null);
 
-  // Fetch the token from AsyncStorage
-  const getToken = async () => {
-    try {
-      const token = await AsyncStorage.getItem('userToken');
-      return token;
-    } catch (error) {
-      console.error("Error fetching token:", error);
-      return null;
-    }
+  // Fetch the token from localStorage
+  const getToken = () => {
+    const token = localStorage.getItem("userToken");
+    console.log("Retrieved Token:", token); // Debugging log
+    return token;
   };
 
   // Fetch Todos
   const fetchTodos = async () => {
-    const token = await getToken(); // Retrieve the token
+    const token = getToken();
     if (token) {
       try {
-        const response = await axios.get(`${BASE_URL}/get`, {
+        const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/todos/get`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
+        console.log("fetched todos:", response.data);
+        
         setTodos(response.data);
       } catch (error) {
         console.error("Error fetching todos:", error);
@@ -46,21 +41,24 @@ const TodoList = () => {
   // Add or Edit Todo
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const token = await getToken(); // Retrieve the token
+    const token = getToken();
     if (token) {
       if (editId) {
         try {
-          await axios.put(`${BASE_URL}/update${editId}`,
+          // Use todo.id for the update in the URL
+          await axios.put(`${import.meta.env.VITE_BASE_URL}/api/todos/update/${editId}`,
             { title, description, completed },
             { headers: { Authorization: `Bearer ${token}` } }
           );
-          setEditId(null);
+          console.log(`${import.meta.env.VITE_BASE_URL}/api/todos/put/${editId}`);
+          
+          setEditId(null); // Reset the edit state
         } catch (error) {
           console.error("Error updating todo:", error);
         }
       } else {
         try {
-          await axios.post(`${BASE_URL}/create`,
+          await axios.post(`${import.meta.env.VITE_BASE_URL}/api/todos/create`,
             { title, description, completed },
             { headers: { Authorization: `Bearer ${token}` } }
           );
@@ -71,7 +69,7 @@ const TodoList = () => {
       setTitle('');
       setDescription('');
       setCompleted(false);
-      fetchTodos();
+      fetchTodos(); // Refresh the todo list
     } else {
       console.log("No token available.");
     }
@@ -79,29 +77,36 @@ const TodoList = () => {
 
   // Delete Todo
   const handleDelete = async (id) => {
-    const token = await getToken(); // Retrieve the token
-    if (token) {
+    const token = getToken();
+    console.log("Todo ID for delete:", id); // Log the ID being passed
+    
+    if (id && token) {
       try {
-        await axios.delete(`${BASE_URL}/delete${id}`, {
+        const url = `${import.meta.env.VITE_BASE_URL}/api/todos/delete/${id}`;
+        console.log("Request URL:", url); // Log the full URL for debugging
+  
+        await axios.delete(url, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        fetchTodos();
+  
+        fetchTodos(); // Refresh the todos list after deletion
       } catch (error) {
         console.error("Error deleting todo:", error);
       }
     } else {
-      console.log("No token available.");
+      console.log("No token available or invalid Todo ID.");
     }
   };
 
   // Edit Todo
   const handleEdit = (todo) => {
-    setEditId(todo.id);
+    setEditId(todo.id);  // Use todo.id here for the edit action
     setTitle(todo.title);
     setDescription(todo.description);
     setCompleted(todo.completed);
   };
 
+  // Fetch Todos on Component Mount
   useEffect(() => {
     fetchTodos();
   }, []);
@@ -113,6 +118,7 @@ const TodoList = () => {
       <form onSubmit={handleSubmit} className="todo-form">
         <input
           type="text"
+          name="title"
           placeholder="Enter title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
@@ -122,6 +128,7 @@ const TodoList = () => {
         <label className="todo-checkbox-label">
           <input
             type="checkbox"
+            name="completed"
             checked={completed}
             onChange={(e) => setCompleted(e.target.checked)}
             className="todo-checkbox"
@@ -135,25 +142,29 @@ const TodoList = () => {
       </form>
 
       <div className="todo-list">
-        {todos.map((todo) => (
-          <div key={todo.id} className={`todo-item ${todo.completed ? 'completed' : ''}`}>
-            <div className="todo-details">
-              <h3 className="todo-title">{todo.title}</h3>
-              <p className="todo-description">{todo.description}</p>
-              <p className="todo-status">
-                Status: {todo.completed ? "Completed" : "Incomplete"}
-              </p>
+        {todos.map((todo) => {
+          console.log("Todo item:", todo); // Ensure todo has the correct ID field
+          return (
+            <div key={todo.id} className={`todo-item ${todo.completed ? 'completed' : ''}`}>
+              <div className="todo-details">
+                <h3 className="todo-title">{todo.title}</h3>
+                <p className="todo-description">{todo.description}</p>
+                <p className="todo-status">
+                  Status: {todo.completed ? "Completed" : "Incomplete"}
+                </p>
+              </div>
+
+              <div className="todo-actions">
+                <button onClick={() => handleEdit(todo)} className="todo-edit-button">
+                  <FaEdit /> Edit
+                </button>
+                <button onClick={() => handleDelete(todo.id)} className="todo-delete-button">
+                  <FaTrashAlt /> Delete
+                </button>
+              </div>
             </div>
-            <div className="todo-actions">
-              <button onClick={() => handleEdit(todo)} className="todo-edit-button">
-                <FaEdit /> Edit
-              </button>
-              <button onClick={() => handleDelete(todo.id)} className="todo-delete-button">
-                <FaTrashAlt /> Delete
-              </button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

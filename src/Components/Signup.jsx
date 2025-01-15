@@ -6,8 +6,6 @@ import axios from "axios";
 import { FaUser, FaEnvelope, FaLock, FaCheckCircle, FaEye, FaEyeSlash } from "react-icons/fa";
 import "../styles/SignUpStyles.css";
 
-const baseURL = "https://recently-levitra-taxi-becoming.trycloudflare.com";
-
 const signupSchema = yup.object().shape({
   name: yup.string().required("Name is required").min(3, "Name must be at least 3 characters"),
   email: yup.string().required("Email is required").email("Invalid email format"),
@@ -36,10 +34,21 @@ const SignUp = () => {
   });
 
   const onSubmit = async (data) => {
+//    console.log("payload", data);
+    
     try {
-      const response = await axios.post(`${baseURL}/signup`, data);
+      const response = await axios.post(
+        `${import.meta.env.VITE_BASE_URL}/api/users/signup`,
+        
+         data,
+         { headers: { "Content-Type": "application/json" } }
+      );
+      console.log(import.meta.env.VITE_BASE_URL);
+      
+    //  const response = await axios.post(`${process.env.REACT_APP_BASE_URL}/api/users/signup`, data);
       alert(response.data.message);
     } catch (error) {
+      console.error(error.response);
       alert(error.response?.data?.message || "Something went wrong");
     }
   };
@@ -48,22 +57,25 @@ const SignUp = () => {
     <div className="signup-container">
       <h2>Sign Up</h2>
       <form onSubmit={handleSubmit(onSubmit)}>
-      <label htmlFor="name" className="input-label">Name</label>
+        <label htmlFor="name" className="input-label">Name</label>
         <div className="input-group">
           <FaUser className="icon" />
-          <input type="text" placeholder="Name" {...register("name")} />
+          <input id="name" type="text" placeholder="Name" {...register("name")} />
         </div>
         <p className="error">{errors.name?.message}</p>
-        <label htmlFor="name" className="input-label">Email</label>
+
+        <label htmlFor="email" className="input-label">Email</label>
         <div className="input-group">
           <FaEnvelope className="icon" />
-          <input type="email" placeholder="Email" {...register("email")} />
+          <input id="email" type="email" placeholder="Email" {...register("email")} />
         </div>
         <p className="error">{errors.email?.message}</p>
-        <label htmlFor="name" className="input-label">Password</label>
+
+        <label htmlFor="password" className="input-label">Password</label>
         <div className="input-group">
           <FaLock className="icon" />
           <input
+            id="password"
             type={showPassword ? "text" : "password"}
             placeholder="Password"
             {...register("password")}
@@ -76,11 +88,12 @@ const SignUp = () => {
           </span>
         </div>
         <p className="error">{errors.password?.message}</p>
-        <label htmlFor="name" className="input-label">Confirm Password</label>
+
+        <label htmlFor="confirmPassword" className="input-label">Confirm Password</label>
         <div className="input-group">
-        
           <FaLock className="icon" />
           <input
+            id="confirmPassword"
             type={showConfirmPassword ? "text" : "password"}
             placeholder="Confirm Password"
             {...register("confirmPassword")}
